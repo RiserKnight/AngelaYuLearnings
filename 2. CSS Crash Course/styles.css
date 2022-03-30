@@ -1,0 +1,51 @@
+h1{
+    color:orange;
+}
+
+.box-model{
+    border: 1px solid red;
+    height: 50px;
+    width: 300px;
+    padding: 20px;
+    margin: 20px;
+}
+
+h2{
+    color: red;
+}
+
+h2{
+    color:green;
+}
+#suba{
+    color: salmon;
+}
+
+.sub{
+    color: green;
+}
+
+h3{
+    color: red;
+}
+
+th,td{
+    border-bottom: 1px solid #ccc;
+    padding: 15px;
+}
+
+table{
+    border-collapse: collapse;
+    width: 60%;
+}
+td{
+    text-align: center;
+   
+}
+.content1{
+    border: 1px solid red;
+}
+.content2{
+    border: 1px solid blue;
+}
+
