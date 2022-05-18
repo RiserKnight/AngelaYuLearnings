@@ -3,10 +3,9 @@ var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var session = require('express-session');
 var morgan = require('morgan');
-var User = require('./models/user');
-var hbs = require('express-handlebars'); 
 var path = require('path'); 
-
+const ejs = require("ejs");
+const {User}=require('./models');
 
 // invoke an instance of express application.
 var app = express();
@@ -30,18 +29,11 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        expires: 600000
+        expires: 3600000
     }
 }));
-
-
-var handlebars = hbs.create({
-    defaultLayout: 'layout',
-    extname: '.hbs'
-});
-app.engine('.hbs', handlebars.engine);
-app.set('view engine', '.hbs');
-
+app.use(express.static(__dirname+"/public"));
+app.set('view engine', 'ejs');
 
 // This middleware will check if user's cookie is still saved in browser and user is not set, then automatically log the user out.
 // This usually happens when you stop your express server after login, your cookie still remains saved in the browser.
@@ -52,31 +44,27 @@ app.use((req, res, next) => {
     next();
 });
 
-var hbsContent = {userName: '', loggedin: false, title: "You are not logged in today", body: "Hello World"}; 
+var userContent = {userName: '', loggedin: false, title: "You are not logged in today", body: "Hello World"}; 
 
 // middleware function to check for logged-in users
 var sessionChecker = (req, res, next) => {
     if (req.session.user && req.cookies.user_sid) {
 		
-        res.redirect('/dashboard');
+        res.render("dashboard",{name: userContent.userName})
     } else {
         next();
     }    
 };
 
-
 // route for Home-Page
 app.get('/', sessionChecker, (req, res) => {
-    res.redirect('/login');
+    res.sendFile(__dirname+"/views/login.html");
 });
-
 
 // route for user signup
 app.route('/signup')
-    //.get(sessionChecker, (req, res) => {
-    .get((req, res) => {
-        //res.sendFile(__dirname + '/public/signup.html');
-        res.render('signup', hbsContent);
+    .get(sessionChecker, (req, res) => {
+        res.sendFile(__dirname + '/views/signup.html');
     })
     .post((req, res) => {
         User.create({
@@ -93,65 +81,60 @@ app.route('/signup')
         });
     });
 
-
-// route for user Login
+    // route for user Login
 app.route('/login')
-    .get(sessionChecker, (req, res) => {
-        //res.sendFile(__dirname + '/public/login.html');
-        res.render('login', hbsContent);
-    })
-    .post((req, res) => {
-        var username = req.body.username,
-            password = req.body.password;
+.get(sessionChecker, (req, res) => {
+    res.sendFile(__dirname + '/views/login.html');
+})
+.post((req, res) => {
+    var username = req.body.username,
+        password = req.body.password;
 
-        User.findOne({ where: { username: username } }).then(function (user) {
-            if (!user) {
-                res.redirect('/login');
-            } else if (!user.validPassword(password)) {
-                res.redirect('/login');
-            } else {
-                req.session.user = user.dataValues;
-                res.redirect('/dashboard');
-            }
-        });
+    User.findOne({ where: { username: username } }).then(function (user) {
+        if (!user) {
+            res.redirect('/login');
+        } else if (!user.validPassword(password)) {
+            res.redirect('/login');
+        } else {
+            req.session.user = user.dataValues;
+            res.redirect('/dashboard');
+        }
     });
-
+});
 
 // route for user's dashboard
 app.get('/dashboard', (req, res) => {
     if (req.session.user && req.cookies.user_sid) {
-		hbsContent.loggedin = true; 
-		hbsContent.userName = req.session.user.username; 
-		//console.log(JSON.stringify(req.session.user)); 
-		console.log(req.session.user.username); 
-		hbsContent.title = "You are logged in"; 
-        //res.sendFile(__dirname + '/public/dashboard.html');
-        res.render('index', hbsContent);
+		userContent.loggedin = true; 
+		userContent.userName = req.session.user.username; 
+		console.log(JSON.stringify(req.session.user)); 
+		 
+		userContent.title = "You are logged in"; 
+        res.render("dashboard",{name: userContent.userName});
+        
     } else {
         res.redirect('/login');
     }
 });
 
-
 // route for user logout
 app.get('/logout', (req, res) => {
     if (req.session.user && req.cookies.user_sid) {
-		hbsContent.loggedin = false; 
-		hbsContent.title = "You are logged out!"; 
+		userContent.loggedin = false; 
+		userContent.title = "You are logged out!"; 
         res.clearCookie('user_sid');
-		console.log(JSON.stringify(hbsContent)); 
+		console.log(JSON.stringify(userContent)); 
         res.redirect('/');
     } else {
         res.redirect('/login');
     }
 });
 
-
 // route for handling 404 requests(unavailable routes)
 app.use(function (req, res, next) {
-  res.status(404).send("Sorry can't find that!")
-});
-
-
-// start the express server
-app.listen(app.get('port'), () => console.log(`App started on port ${app.get('port')}`));
+    res.status(404).send("Sorry can't find that!")
+  });
+  
+  
+  // start the express server
+  app.listen(app.get('port'), () => console.log(`App started on port ${app.get('port')}`));
